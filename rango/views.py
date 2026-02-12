@@ -15,6 +15,14 @@ def index(request):
     context_dict['boldmessage'] = 'Crunchy, creamy, cookie, candy, cupcake!'
     context_dict['categories'] = category_list
 
+    visits = request.session.get('visits', 1)
+
+    reset_last_visit_time = False
+
+    request.session['visits'] = visits + 1
+
+    context_dict['visits'] = visits
+
     # 3. Rendering template
     return render(request, 'rango/index.html', context=context_dict)
 
