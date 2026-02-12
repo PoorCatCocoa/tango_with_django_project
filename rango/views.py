@@ -1,9 +1,7 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from rango.models import Category, Page
-from rango.forms import CategoryForm
-from django.shortcuts import redirect
-from rango.forms import PageForm
+from rango.forms import CategoryForm, UserForm, UserProfileForm, PageForm
 from django.urls import reverse
 
 def index(request):
@@ -90,3 +88,40 @@ def add_page(request, category_name_slug):
 
     context_dict = {'form': form, 'category': category}
     return render(request, 'rango/add_page.html', context=context_dict)
+
+def register(request):
+    registered = False
+
+    if request.method == 'POST':
+        user_form = UserForm(request.POST)
+        profile_form = UserProfileForm(request.POST)
+
+        if user_form.is_valid() and profile_form.is_valid():
+            # 1. Save User form data
+            user = user_form.save()
+            # 2. Hash encryption of the password
+            user.set_password(user.password)
+            user.save()
+
+            # 3. Save Profile form data
+            profile = profile_form.save(commit=False)
+            # 4. Set the Profile to the User you just created
+            profile.user = user
+
+            # 5. Process uploaded images
+            if 'picture' in request.FILES:
+                profile.picture = request.FILES['picture']
+
+            # 6. Finally save the profile
+            profile.save()
+            registered = True
+        else:
+            print(user_form.errors, profile_form.errors)
+    else:
+        user_form = UserForm()
+        profile_form = UserProfileForm()
+
+    return render(request, 'rango/register.html',
+                  {'user_form': user_form,
+                   'profile_form': profile_form,
+                   'registered': registered})
