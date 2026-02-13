@@ -5,29 +5,42 @@ from rango.forms import CategoryForm, UserForm, UserProfileForm, PageForm
 from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from datetime import datetime
+
+def visitor_cookie_handler(request):
+    visits = int(request.session.get('visits', '1'))
+
+    last_visit_cookie = request.session.get('last_visit', str(datetime.now()))
+    last_visit_time = datetime.strptime(last_visit_cookie[:-7], '%Y-%m-%d %H:%M:%S')
+
+    if (datetime.now() - last_visit_time).days > 0:
+        visits = visits + 1
+        request.session['last_visit'] = str(datetime.now())
+    else:
+        request.session['last_visit'] = last_visit_cookie
+
+    request.session['visits'] = visits
 
 def index(request):
-    # 1. Query the database: Retrieve the top 5 categories by number of likes
-    category_list = Category.objects.order_by('-likes')[:5]
+    visitor_cookie_handler(request)
 
-    # 2. Building a dictionary: putting the query results into context_dict
+    category_list = Category.objects.order_by('-likes')[:5]
+    page_list = Page.objects.order_by('-views')[:5]
+
     context_dict = {}
     context_dict['boldmessage'] = 'Crunchy, creamy, cookie, candy, cupcake!'
     context_dict['categories'] = category_list
+    context_dict['pages'] = page_list
 
-    visits = request.session.get('visits', 1)
 
-    reset_last_visit_time = False
-
-    request.session['visits'] = visits + 1
-
-    context_dict['visits'] = visits
-
-    # 3. Rendering template
     return render(request, 'rango/index.html', context=context_dict)
 
 def about(request):
-    return render(request, 'rango/about.html')
+    visits = request.session.get('visits', 1)
+
+    context_dict = {'visits': visits}
+
+    return render(request, 'rango/about.html', context=context_dict)
 
 def show_category(request, category_name_slug):
     # Create a context dictionary
